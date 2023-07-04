@@ -30,7 +30,7 @@ export async function register(
       return response.status(409).send({ message: err.message })
     }
 
-    return response.status(500).send() // TODO: fix me xD
+    throw err
   }
 
   return response.status(201).send()
