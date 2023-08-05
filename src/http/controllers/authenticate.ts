@@ -1,33 +1,41 @@
-import { FastifyReply, FastifyRequest } from 'fastify'
-import { z } from 'zod'
-import { InvalidCredentialsError } from '@/use-cases/errors/invalid-credentials-error'
-import { makeAuthenticateUseCase } from '@/use-cases/factories/make-authenticate-use-case'
+import { FastifyReply, FastifyRequest } from "fastify";
+import { z } from "zod";
+import { InvalidCredentialsError } from "@/use-cases/errors/invalid-credentials-error";
+import { makeAuthenticateUseCase } from "@/use-cases/factories/make-authenticate-use-case";
 
-export async function authenticate(
-  request: FastifyRequest,
-  response: FastifyReply,
-) {
+export async function authenticate(request: FastifyRequest, response: FastifyReply) {
   const authenticadeBodySchema = z.object({
     email: z.string().email(),
     password: z.string().min(6),
-  })
+  });
 
-  const { email, password } = authenticadeBodySchema.parse(request.body)
+  const { email, password } = authenticadeBodySchema.parse(request.body);
 
   try {
-    const authenticateUseCase = makeAuthenticateUseCase()
+    const authenticateUseCase = makeAuthenticateUseCase();
 
-    await authenticateUseCase.execute({
+    const { user } = await authenticateUseCase.execute({
       email,
       password,
-    })
+    });
+
+    const token = await response.jwtSign(
+      {},
+      {
+        sign: {
+          sub: user.id,
+        },
+      }
+    );
+
+    return response.status(200).send({
+      token,
+    });
   } catch (err) {
     if (err instanceof InvalidCredentialsError) {
-      return response.status(400).send({ message: err.message })
+      return response.status(400).send({ message: err.message });
     }
 
-    throw err
+    throw err;
   }
-
-  return response.status(201).send()
 }
